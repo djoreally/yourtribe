@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Better Auth core models. These remain in the public schema so they work with
+// the standard Prisma adapter and can be migrated directly on Neon Postgres.
+model User {
+  id                  String         @id
+  name                String
+  email               String         @unique
+  emailVerified       Boolean        @default(false)
+  image               String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  organizationMembers Member[]
+  tenantMemberships   TenantMember[]
+
+  @@map("user")
+}
+
+model Session {
+  id                   String   @id
+  expiresAt            DateTime
+  token                String   @unique
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  ipAddress            String?
+  userAgent            String?
+  userId               String
+  activeOrganizationId String?
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, value])
+  @@map("verification")
+}
+
+// Better Auth organization plugin models. An organization anchors the tenant's
+// authenticated management team, while Tenant holds the white-label profile.
+model Organization {
+  id          String       @id
+  name        String
+  slug        String       @unique
+  logo        String?
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  members     Member[]
+  invitations Invitation[]
+  tenant      Tenant?
+
+  @@map("organization")
+}
+
+model Member {
+  id             String       @id
+  organizationId String
+  userId         String
+  role           String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id
+  organizationId String
+  email          String
+  role           String
+  status         String
+  expiresAt      DateTime
+  inviterId      String
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("invitation")
+}
+
+model Tenant {
+  id                 String          @id @default(cuid())
+  organizationId     String          @unique
+  name               String
+  slug               String          @unique
+  customDomain       String?         @unique
+  logoUrl            String?
+  primaryColor       String          @default("#111827")
+  secondaryColor     String          @default("#C8FF47")
+  welcomeMessage     String          @default("Upload your moment. Get featured on our official feeds.")
+  uploadLimitMb      Int             @default(100)
+  uploadLimitSeconds Int             @default(60)
+  ayrshareProfileKey String?
+  collectiveEnabled  Boolean         @default(false)
+  collectiveName     String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  organization       Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members            TenantMember[]
+  socialAccounts     SocialAccount[]
+  mediaAssets        MediaAsset[]
+  broadcastLogs      BroadcastLog[]
+
+  @@index([slug])
+  @@map("cp_tenants")
+}
+
+model TenantMember {
+  id        String     @id @default(cuid())
+  tenantId  String
+  userId    String
+  role      TenantRole @default(MANAGER)
+  createdAt DateTime   @default(now())
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("cp_tenant_members")
+}
+
+model SocialAccount {
+  id            String    @id @default(cuid())
+  tenantId      String
+  platform      Platform
+  accountName   String?
+  accountHandle String?
+  isConnected   Boolean   @default(false)
+  lastSyncedAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, platform])
+  @@map("cp_social_accounts")
+}
+
+model MediaAsset {
+  id                String         @id @default(cuid())
+  tenantId          String
+  rawMediaUrl       String
+  processedMediaUrl String?
+  thumbnailUrl      String?
+  mediaType         MediaType
+  patronHandle      String?
+  patronCaption     String?
+  rightsAgreed      Boolean        @default(false)
+  rightsAgreedAt    DateTime?
+  status            AssetStatus    @default(PENDING)
+  scheduledFor      DateTime?
+  rejectionReason   String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  tenant            Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  broadcasts        BroadcastLog[]
+
+  @@index([tenantId, status, createdAt])
+  @@map("cp_media_assets")
+}
+
+model BroadcastLog {
+  id                String          @id @default(cuid())
+  assetId           String
+  tenantId          String
+  platformsTargeted Platform[]
+  ayrsharePostId    String?
+  status            BroadcastStatus @default(PROCESSING)
+  errorLog          String?
+  publishedAt       DateTime?
+  createdAt         DateTime        @default(now())
+  asset             MediaAsset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@map("cp_broadcast_logs")
+}
+
+// Retained for existing intake routes that remain available in the repository.
+model FormSubmission {
+  id        Int      @id @default(autoincrement())
+  formType  String
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@map("form_submissions")
+}
+
+enum TenantRole {
+  OWNER
+  MANAGER
+  REVIEWER
+}
+
+enum Platform {
+  INSTAGRAM
+  TIKTOK
+  FACEBOOK
+  GMB
+  YOUTUBE
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum AssetStatus {
+  PENDING
+  APPROVED
+  SCHEDULED
+  REJECTED
+}
+
+enum BroadcastStatus {
+  PROCESSING
+  SUCCESS
+  FAILED
+}
