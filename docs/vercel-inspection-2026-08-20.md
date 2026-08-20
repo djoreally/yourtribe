@@ -44,3 +44,9 @@ The corrected production deployment completed successfully with status **Ready**
 ## Post-deployment validation
 
 The production Better Auth endpoint at `https://yourtribe.vercel.app/api/auth/get-session` now returns `null` for an anonymous visitor, which is the expected successful response when no session exists. It no longer returns the prior 500 default-secret error. The production landing page at `https://yourtribe.vercel.app` also renders successfully, including the Content Pyramid marketing experience and working navigation links.
+
+## Email/password feature release
+
+Commit `dfdd206` (`Add manager email password account flows`) was pushed to `main`. Vercel automatically started a new Production deployment for this commit; at the latest check it was still building.
+The automatic email/password feature deployment was no longer shown as building on the project overview at the latest refresh, while the production summary still displayed the previous deployment. The deployment history will be inspected next to determine the new release’s final status.
+The Vercel deployment history confirms the email/password feature release, commit `dfdd206`, completed successfully in **40 seconds** with status **Ready**. The production sign-in page now displays the email/password fields and the checked **Keep me signed in on this device** control.
