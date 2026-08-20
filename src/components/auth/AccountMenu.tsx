@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, UserRound } from "lucide-react";
+import { KeyRound, LogOut, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "@/lib/auth-client";
@@ -51,6 +51,7 @@ export function AccountMenu() {
         <div className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-[#dbe5dd] bg-white p-2 shadow-[0_18px_45px_rgba(18,45,38,0.16)]">
           <div className="flex items-center gap-3 px-3 py-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eaf0ec] text-[#244e3d]"><UserRound className="h-4 w-4" /></span><span className="min-w-0"><span className="block truncate text-sm font-extrabold text-[#17382f]">{data.user.name}</span><span className="block truncate text-xs text-[#708178]">{data.user.email}</span></span></div>
           <div className="my-1 border-t border-[#edf1ee]" />
+          <Link href="/account/security" onClick={() => setIsOpen(false)} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#244e3d] transition hover:bg-[#eef4ef]"><KeyRound className="h-4 w-4" />Account security</Link>
           <button type="button" onClick={handleSignOut} disabled={isSigningOut} className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-[#a14234] transition hover:bg-[#fff1ef] disabled:cursor-wait disabled:opacity-70"><LogOut className="h-4 w-4" />{isSigningOut ? "Signing out…" : "Sign out"}</button>
         </div>
       )}
