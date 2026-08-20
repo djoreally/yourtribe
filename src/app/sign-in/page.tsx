@@ -11,6 +11,7 @@ function SignInContent() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const callbackURL = searchParams.get("callbackUrl") || "/dashboard";
+  const resetCompleted = searchParams.get("reset") === "success";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,9 +42,10 @@ function SignInContent() {
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#eaf0ec] text-[#17382f]"><KeyRound className="h-5 w-5" /></div>
             <h2 className="mt-6 font-[family-name:var(--font-display)] text-3xl font-bold tracking-[-0.055em] text-[#17382f]">Welcome back.</h2>
             <p className="mt-2 text-sm leading-6 text-[#61746a]">Sign in to review and publish content for your business.</p>
+            {resetCompleted && <p role="status" className="mt-5 rounded-xl bg-[#eef6ed] px-3 py-2.5 text-sm font-semibold text-[#2c6344]">Password updated. Sign in with your new password.</p>}
             <form onSubmit={handleSubmit} className="mt-7 space-y-4">
               <div><label htmlFor="email" className="mb-2 block text-sm font-bold text-[#27483c]">Email address</label><input id="email" name="email" type="email" autoComplete="email" required placeholder="you@business.com" className="w-full rounded-xl border border-[#ccd8d1] px-4 py-3 text-[#17382f] outline-none transition placeholder:text-[#9aa9a1] focus:border-[#17382f] focus:ring-4 focus:ring-[#d9ff5a]/40" /></div>
-              <div><label htmlFor="password" className="mb-2 block text-sm font-bold text-[#27483c]">Password</label><input id="password" name="password" type="password" autoComplete="current-password" required minLength={8} maxLength={128} placeholder="••••••••" className="w-full rounded-xl border border-[#ccd8d1] px-4 py-3 text-[#17382f] outline-none transition placeholder:text-[#9aa9a1] focus:border-[#17382f] focus:ring-4 focus:ring-[#d9ff5a]/40" /></div>
+              <div><div className="mb-2 flex items-center justify-between gap-3"><label htmlFor="password" className="block text-sm font-bold text-[#27483c]">Password</label><Link href="/forgot-password" className="text-xs font-bold text-[#244e3d] hover:underline">Forgot password?</Link></div><input id="password" name="password" type="password" autoComplete="current-password" required minLength={8} maxLength={128} placeholder="••••••••" className="w-full rounded-xl border border-[#ccd8d1] px-4 py-3 text-[#17382f] outline-none transition placeholder:text-[#9aa9a1] focus:border-[#17382f] focus:ring-4 focus:ring-[#d9ff5a]/40" /></div>
               <label className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold text-[#4e655a]"><input name="rememberMe" type="checkbox" defaultChecked className="h-4 w-4 rounded border-[#a9bab0] text-[#17382f] focus:ring-[#d9ff5a]" />Keep me signed in on this device</label>
               {error && <p role="alert" className="rounded-xl bg-[#fff0ed] px-3 py-2.5 text-sm font-semibold text-[#9d2f1c]">{error}</p>}
               <button type="submit" disabled={isSubmitting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#17382f] px-4 py-3.5 text-sm font-extrabold text-white transition hover:bg-[#254d42] disabled:cursor-wait disabled:opacity-70">{isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <>Sign in <ArrowRight className="h-4 w-4 text-[#d9ff5a]" /></>}</button>
