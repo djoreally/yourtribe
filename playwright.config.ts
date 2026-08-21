@@ -21,5 +21,10 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://ci:ci@127.0.0.1:5432/ci",
+      BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "ci-only-secret-not-for-production",
+      BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+    },
   },
 });
