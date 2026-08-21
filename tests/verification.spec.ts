@@ -33,3 +33,12 @@ test("renders persistent email/password sign-in controls", async ({ page }) => {
   await expect(page.getByLabel("Keep me signed in on this device")).toBeChecked();
   await expect(page.getByRole("button", { name: /^Sign in/i })).toBeVisible();
 });
+
+test("reports transactional email readiness without exposing secrets", async ({ request }) => {
+  const response = await request.get("/api/health/auth-email");
+  expect([200, 503]).toContain(response.status());
+  const payload = await response.json() as { provider?: string; configured?: boolean; missing?: string[] };
+  expect(payload.provider).toBe("resend");
+  expect(typeof payload.configured).toBe("boolean");
+  expect(JSON.stringify(payload)).not.toContain("re_");
+});

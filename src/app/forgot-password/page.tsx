@@ -8,19 +8,31 @@ import { requestPasswordReset } from "@/lib/auth-client";
 export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
+    setError(null);
     const email = String(new FormData(event.currentTarget).get("email") ?? "").trim();
 
-    await requestPasswordReset({
-      email,
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      const healthResponse = await fetch("/api/health/auth-email", { cache: "no-store" });
+      if (!healthResponse.ok) {
+        throw new Error("Password recovery is temporarily unavailable. Please contact your workspace administrator.");
+      }
 
-    setIsSubmitting(false);
-    setSent(true);
+      const { error: resetError } = await requestPasswordReset({
+        email,
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (resetError) throw new Error(resetError.message ?? "We could not start password recovery. Please try again.");
+      setSent(true);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "We could not start password recovery. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -31,6 +43,7 @@ export default function ForgotPasswordPage() {
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#d9ff5a] text-[#17382f]"><MailCheck className="h-5 w-5" /></div>
           <h1 className="mt-6 font-[family-name:var(--font-display)] text-3xl font-bold tracking-[-0.055em] text-[#17382f]">Reset your password.</h1>
           <p className="mt-2 text-sm leading-6 text-[#61746a]">Enter the email for your Northstar manager account. If it is eligible for recovery, we&apos;ll send a secure reset link.</p>
+          {error && <p role="alert" className="mt-7 rounded-xl bg-[#fff0ed] px-4 py-3 text-sm font-semibold leading-6 text-[#9d2f1c]">{error}</p>}
           {sent ? (
             <div role="status" className="mt-7 rounded-xl bg-[#eef6ed] px-4 py-4 text-sm leading-6 text-[#2c6344]">If an eligible account matches that email address, a password-reset message is on its way. Check your inbox and spam folder.</div>
           ) : (

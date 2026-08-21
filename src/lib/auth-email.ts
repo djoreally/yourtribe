@@ -12,7 +12,31 @@ type AuthEmail = {
   idempotencyKey: string;
 };
 
-const from = process.env.RESEND_FROM_EMAIL ?? "Northstar <hello@momsoilchange.com>";
+const defaultFrom = "Northstar <hello@momsoilchange.com>";
+const from = process.env.RESEND_FROM_EMAIL ?? defaultFrom;
+
+export function getAuthEmailHealth() {
+  const missing: string[] = [];
+  if (!process.env.RESEND_API_KEY) missing.push("RESEND_API_KEY");
+  if (!process.env.RESEND_FROM_EMAIL) missing.push("RESEND_FROM_EMAIL");
+
+  return {
+    provider: "resend" as const,
+    configured: missing.length === 0,
+    missing,
+    from: process.env.RESEND_FROM_EMAIL ?? null,
+    requiredInProduction: true,
+  };
+}
+
+function assertEmailConfigured() {
+  const health = getAuthEmailHealth();
+  if (health.configured) return;
+
+  const message = `[auth-email] Missing production email configuration: ${health.missing.join(", ")}`;
+  if (process.env.NODE_ENV === "production") throw new Error(message);
+  console.warn(message);
+}
 
 function renderEmail({ title, message, actionLabel, actionUrl }: AuthEmail) {
   return `<!doctype html>
@@ -35,16 +59,14 @@ function renderEmail({ title, message, actionLabel, actionUrl }: AuthEmail) {
 }
 
 /**
- * Sends transactional authentication email in the background. Better Auth callers
- * return without waiting on a provider round-trip to avoid exposing account state
- * through response timing.
+ * Sends transactional authentication email without exposing account state through
+ * provider timing. Production misconfiguration fails the auth operation instead of
+ * reporting a successful recovery or verification flow that cannot deliver mail.
  */
 export function queueAuthEmail(email: AuthEmail) {
+  assertEmailConfigured();
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.error(`[auth-email:${email.event}] RESEND_API_KEY is not configured.`);
-    return;
-  }
+  if (!apiKey) return;
 
   const resend = new Resend(apiKey);
   void resend.emails.send({
@@ -56,9 +78,13 @@ export function queueAuthEmail(email: AuthEmail) {
     tags: [{ name: "category", value: email.event }],
   }, {
     idempotencyKey: email.idempotencyKey,
-  }).then(({ error }) => {
-    if (error) console.error(`[auth-email:${email.event}] Resend delivery failed.`, error);
+  }).then(({ error, data }) => {
+    if (error) {
+      console.error(JSON.stringify({ event: "auth_email_delivery_failed", authEvent: email.event, recipient: email.to, error }));
+      return;
+    }
+    console.info(JSON.stringify({ event: "auth_email_delivery_accepted", authEvent: email.event, recipient: email.to, providerMessageId: data?.id ?? null }));
   }).catch((error: unknown) => {
-    console.error(`[auth-email:${email.event}] Resend request failed.`, error);
+    console.error(JSON.stringify({ event: "auth_email_delivery_error", authEvent: email.event, recipient: email.to, error: error instanceof Error ? error.message : String(error) }));
   });
 }

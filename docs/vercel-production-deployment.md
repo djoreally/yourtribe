@@ -15,6 +15,8 @@ In **Project Settings → Environment Variables**, add the following values for 
 | `DATABASE_URL` | The **pooled** connection string for the committed Neon database and branch, with TLS required. | Server only |
 | `BETTER_AUTH_SECRET` | A unique high-entropy secret. Generate it with `openssl rand -base64 32`. | Server only |
 | `BETTER_AUTH_URL` | The exact canonical origin, such as `https://app.example.com`. No trailing slash. | Server only |
+| `RESEND_API_KEY` | A production Resend API key with permission to send from the verified sender. | Server only; required |
+| `RESEND_FROM_EMAIL` | The verified sender identity, such as `Northstar <hello@example.com>`. | Server only; required |
 | `AYRSHARE_API_KEY` | Ayrshare server key, when live distribution is enabled. | Server only |
 | `STORAGE_UPLOAD_ENDPOINT` | The server-side storage-signing service URL, when direct uploads are enabled. | Server only |
 
@@ -46,6 +48,7 @@ After deployment, open `/sign-up` and create a manager account. Then confirm the
 | Dashboard header | Shows the authenticated user’s initials and account menu. |
 | Sign out | Clears the client session and returns to `/sign-in`. |
 | Manager API route | Validates the server-side Better Auth session and tenant membership before returning tenant data. |
+| `/api/health/auth-email` | Returns `200` only when Resend configuration is ready; returns `503` otherwise. |
 
 ## Better Auth Frontend Integration
 
